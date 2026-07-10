@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Times Table Robber — The 9 Lines Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F7FF;
+    --panel:#FFFFFF;
+    --ink:#27395D;
+    --ink-soft:#5C6E8F;
+    --sun:#FFB703;
+    --sun-deep:#F79D00;
+    --grass:#3BB273;
+    --robber:#E5484D;
+    --line:#D7E3F4;
+    --card-back:#27395D;
+    --radius:18px;
+    --shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(255,183,3,.10), transparent 30%),
+      radial-gradient(circle at 88% 90%, rgba(59,178,115,.10), transparent 32%),
+      var(--bg);
+    color:var(--ink);
+    padding:14px;
+    min-height:100%;
+    overflow-x:hidden;
+  }
+
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:14px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo .badge{
+    width:52px;height:52px;border-radius:16px;background:var(--card-back);
+    display:grid;place-items:center;font-size:30px;flex:none;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:clamp(20px,3.4vw,30px);font-weight:700;line-height:1.05}
+  h1 small{display:block;font-size:.52em;font-weight:500;color:var(--ink-soft)}
+  .spacer{flex:1}
+  .iconbtn{
+    border:2px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:12px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer;box-shadow:var(--shadow);
+  }
+  .iconbtn:active{transform:translateY(2px);box-shadow:none}
+
+  /* ---------- table picker ---------- */
+  .picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  .picker .label{font-weight:600;color:var(--ink-soft);margin-right:2px}
+  .chip{
+    width:46px;height:46px;border-radius:14px;border:2px solid var(--line);
+    background:var(--panel);color:var(--ink);font:inherit;font-size:20px;font-weight:700;
+    cursor:pointer;box-shadow:var(--shadow);transition:transform .12s;
+  }
+  .chip:hover{transform:translateY(-2px)}
+  .chip.on{background:var(--sun);border-color:var(--sun-deep);color:#5C3A00}
+
+  /* ---------- layout ---------- */
+  .board{display:grid;grid-template-columns:1fr 1.1fr 190px;gap:14px;align-items:start}
+  @media(max-width:900px){
+    .board{grid-template-columns:1fr 1fr}
+    .rail{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr)}
+  }
+  @media(max-width:620px){
+    .board{grid-template-columns:1fr}
+    .rail{grid-template-columns:repeat(2,1fr)}
+  }
+
+  .panel{
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:14px;box-shadow:var(--shadow);
+  }
+  .panel h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .panel h2 .dot{font-size:20px}
+  .hint-line{font-size:13px;color:var(--ink-soft);margin:-4px 0 10px;font-weight:500}
+
+  /* ---------- mystery pile ---------- */
+  .pile{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .pile .below{grid-column:2}
+  .card{
+    aspect-ratio:1/.82;border-radius:14px;position:relative;perspective:600px;
+    touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  }
+  .card.dragging{cursor:grabbing;z-index:40;pointer-events:none}
+  .card.returning{transition:transform .5s cubic-bezier(.2,1.6,.4,1);z-index:30}
+  .card .inner{
+    position:absolute;inset:0;border-radius:14px;transition:transform .45s;
+    transform-style:preserve-3d;
+  }
+  .card.flipped .inner{transform:rotateY(180deg)}
+  .face{
+    position:absolute;inset:0;border-radius:14px;display:grid;place-items:center;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;font-weight:700;
+  }
+  .face.back{
+    background:var(--card-back);color:#fff;font-size:26px;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:0 4px 0 rgba(39,57,93,.25);
+  }
+  .card:not(.flipped):not(.used):hover .inner{transform:rotateY(12deg) translateY(-3px)}
+  .face.front{
+    background:#fff;border:2px solid var(--line);color:var(--ink);
+    transform:rotateY(180deg);font-size:30px;box-shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  .face.front.is-robber{background:#FFE9EA;border-color:var(--robber);font-size:34px}
+  .card.flipped:not(.used) .face.front{border-color:var(--sun);background:#FFF6DF}
+  .card.dragging .face.front{box-shadow:0 14px 22px rgba(39,57,93,.28);transform:rotateY(180deg) scale(1.06)}
+  .card.used{pointer-events:none;cursor:default}
+  .card.used .face.front{opacity:.35;background:#F2F7F3;border-color:#CBE7D6;color:var(--grass)}
+  .card.used .face.front::after{content:'✓';position:absolute;right:8px;bottom:4px;font-size:14px}
+
+  /* ---------- correct-order grid ---------- */
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:column;grid-template-rows:repeat(3,auto);gap:12px 10px}
+  .slot{
+    padding:6px 2px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:12px;
+    border:2px dashed transparent;transition:background .15s,border-color .15s;
+  }
+  .slot .num{min-height:44px;font-size:28px;font-weight:700;display:grid;place-items:center;color:var(--ink)}
+  .slot .rule{width:82%;max-width:96px;height:3px;border-radius:3px;background:var(--ink);opacity:.85}
+  .slot .fact{font-size:13px;font-weight:600;color:var(--ink-soft);min-height:18px}
+  .slot.open .num{color:transparent}
+  body.dragging-now .slot.open{border-color:var(--line);background:#F8FBFF}
+  body.dragging-now .slot.open .rule{background:var(--sun-deep);animation:glowbar 1s ease-in-out infinite}
+  .slot.hover-target{border-color:var(--sun-deep)!important;background:#FFF6DF!important;transform:scale(1.04)}
+  @keyframes glowbar{0%,100%{opacity:.5}50%{opacity:1}}
+  .slot.filled .num{animation:pop .35s}
+  .slot.filled .fact{color:var(--grass);animation:pop .45s}
+  .slot.wrong{animation:shake .4s}
+  .slot.wrong .rule{background:var(--robber)}
+  @keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+  .hide-facts .slot.open .fact{visibility:hidden}
+
+  /* ---------- score rail ---------- */
+  .rail{display:flex;flex-direction:column;gap:10px}
+  .stat{
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:10px 14px;box-shadow:var(--shadow);
+  }
+  .stat .k{font-size:12px;font-weight:600;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+  .stat .v{font-size:30px;font-weight:700;line-height:1.1}
+  .stat.points{background:var(--sun);border-color:var(--sun-deep)}
+  .stat.points .k{color:#7A5200}
+  .stat.points .v{color:#4A3200}
+  .stat .v.bump{animation:pop .35s}
+
+  /* ---------- message bar ---------- */
+  .msg{
+    margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:12px 16px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;min-height:52px;
+  }
+  .msg .emo{font-size:24px}
+
+  /* ---------- robber run + overlays ---------- */
+  .runner{
+    position:fixed;top:42%;left:-120px;font-size:72px;z-index:60;pointer-events:none;display:none;
+    filter:drop-shadow(0 6px 8px rgba(39,57,93,.3));
+  }
+  .runner.go{display:block;animation:run 1.6s ease-in forwards}
+  @keyframes run{0%{left:-120px;transform:scaleX(-1) rotate(0)}50%{transform:scaleX(-1) rotate(-8deg)}100%{left:110%;transform:scaleX(-1) rotate(0)}}
+  .flash{position:fixed;inset:0;background:rgba(229,72,77,.16);z-index:50;pointer-events:none;opacity:0;transition:opacity .3s}
+  .flash.on{opacity:1}
+
+  .confetti-bit{position:fixed;top:-20px;z-index:70;pointer-events:none;border-radius:3px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+
+  /* ---------- how to play ---------- */
+  details{margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  summary{font-weight:700;cursor:pointer}
+  details ol{margin:10px 0 4px 20px;line-height:1.6;font-weight:500;color:var(--ink-soft)}
+  details b{color:var(--ink)}
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="badge">🦹</div>
+      <h1>Times Table Robber<small>The 9 Lines Game</small></h1>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="factBtn" title="Show or hide the fact hints on empty lines">💡 Hints: On</button>
+    <button class="iconbtn" id="soundBtn" title="Sound on/off">🔊 Sound</button>
+    <button class="iconbtn" id="shuffleBtn" title="Shuffle a new round">🔀 New round</button>
+  </header>
+
+  <div class="picker" id="picker">
+    <span class="label">Practice the:</span>
+  </div>
+
+  <div class="board">
+    <section class="panel">
+      <h2><span class="dot">🃏</span> Mystery Cards</h2>
+      <p class="hint-line">Grab a card to flip it… watch out for the robber!</p>
+      <div class="pile" id="pile"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span class="dot">✅</span> Correct Order</h2>
+      <p class="hint-line">Drag each number onto its line.</p>
+      <div class="slots" id="slots"></div>
+    </section>
+
+    <aside class="rail">
+      <div class="stat points"><div class="k">⭐ Points</div><div class="v" id="points">0</div></div>
+      <div class="stat"><div class="k">🔥 Streak</div><div class="v" id="streak">0</div></div>
+      <div class="stat"><div class="k">🏆 Rounds won</div><div class="v" id="wins">0</div></div>
+      <div class="stat"><div class="k">💪 Best streak</div><div class="v" id="best">0</div></div>
+    </aside>
+  </div>
+
+  <div class="msg" id="msg"><span class="emo">👋</span><span id="msgText">Pick a times table, then grab a mystery card to start!</span></div>
+
+  <details>
+    <summary>How to play</summary>
+    <ol>
+      <li>Choose a times table (2–9). The nine answers are hiding in the mystery cards — <b>plus one sneaky robber!</b></li>
+      <li>Grab a card to flip it over, then <b>drag the number onto the line</b> where it belongs, counting in order down each column.</li>
+      <li>Drop it on the right line and the <b>multiplication fact appears</b> — that's +10 points! Drop it on a wrong line and the card bounces back so you can try again.</li>
+      <li>Place all nine before you flip the robber to win the round for a <b>+50 bonus</b>. If the robber pops up, he steals the numbers back and the cards reshuffle!</li>
+    </ol>
+  </details>
+</div>
+
+<div class="runner" id="runner">🦹💰</div>
+<div class="flash" id="flash"></div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const pileEl=$('pile'), slotsEl=$('slots'), msgText=$('msgText'), msgEmo=document.querySelector('#msg .emo');
+
+  const state = {
+    table:5, deck:[], placedCount:0, locked:false,
+    points:0, streak:0, best:0, wins:0, sound:true, hints:true
+  };
+
+  /* ---------- tiny sounds (WebAudio, no files) ---------- */
+  let ctx=null;
+  function tone(freq,dur,type,vol){
+    if(!state.sound) return;
+    try{
+      ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.type=type||'sine'; o.frequency.value=freq;
+      g.gain.setValueAtTime(vol||0.15, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+      o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+dur);
+    }catch(e){}
+  }
+  const sFlip =()=>tone(520,.09,'triangle');
+  const sGood =()=>{tone(660,.1,'sine');setTimeout(()=>tone(880,.14,'sine'),90);};
+  const sWrong=()=>tone(180,.2,'sawtooth',.08);
+  const sRob  =()=>{tone(300,.15,'square',.1);setTimeout(()=>tone(220,.2,'square',.1),140);setTimeout(()=>tone(150,.3,'square',.1),300);};
+  const sWin  =()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.18,'sine'),i*130));
+
+  /* ---------- helpers ---------- */
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function say(emo,text){msgEmo.textContent=emo;msgText.textContent=text;}
+  function bump(id,val){const el=$(id);el.textContent=val;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
+
+  /* ---------- table picker ---------- */
+  const picker=$('picker');
+  for(let n=2;n<=9;n++){
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=n+'s'; b.dataset.n=n;
+    b.setAttribute('aria-label','Practice the '+n+' times table');
+    b.addEventListener('click',()=>{state.table=n;syncChips();newRound(true);});
+    picker.appendChild(b);
+  }
+  function syncChips(){
+    picker.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.n===state.table));
+  }
+
+  /* ---------- build a round ---------- */
+  function newRound(announce){
+    state.deck = shuffle([1,2,3,4,5,6,7,8,9].map(m=>m*state.table).concat(['R']));
+    state.placedCount=0; state.locked=false;
+    document.body.classList.remove('dragging-now');
+
+    pileEl.innerHTML='';
+    state.deck.forEach((val,i)=>{
+      const c=document.createElement('div');
+      c.className='card'+(i===9?' below':'');
+      c.dataset.i=i;
+      c.setAttribute('role','button');
+      c.setAttribute('aria-label','Mystery card');
+      c.innerHTML='<div class="inner">'+
+        '<div class="face back">?</div>'+
+        '<div class="face front'+(val==='R'?' is-robber':'')+'">'+(val==='R'?'🦹':val)+'</div>'+
+        '</div>';
+      c.addEventListener('pointerdown',e=>onGrab(e,i,c));
+      pileEl.appendChild(c);
+    });
+
+    // correct-order slots: column-major like the worksheet (5,10,15 down col 1…)
+    slotsEl.innerHTML='';
+    for(let m=1;m<=9;m++){
+      const s=document.createElement('div');
+      s.className='slot open'; s.dataset.m=m;
+      s.setAttribute('aria-label',m+' times '+state.table);
+      s.innerHTML='<div class="num">'+(m*state.table)+'</div><div class="rule"></div>'+
+                  '<div class="fact">'+m+' × '+state.table+'</div>';
+      slotsEl.appendChild(s);
+    }
+    if(announce) say('🃏','The '+state.table+'s are shuffled and the robber is hiding. Grab a card!');
+  }
+
+  /* ---------- drag engine (pointer events: mouse + touch + pen) ---------- */
+  let drag=null; // {el,val,startX,startY,dx,dy,moved}
+
+  function onGrab(e,i,el){
+    if(state.locked||el.classList.contains('used')||el.classList.contains('returning'))return;
+    if(drag)return;
+    e.preventDefault();
+
+    // flip on first grab
+    if(!el.classList.contains('flipped')){
+      el.classList.add('flipped'); sFlip();
+      const val=state.deck[i];
+      if(val==='R'){ setTimeout(robber,550); return; }
+      say('🔎','You found '+state.deck[i]+'! Drag it onto its line.');
+    }
+    if(state.deck[i]==='R')return;
+
+    drag={el,val:state.deck[i],startX:e.clientX,startY:e.clientY,dx:0,dy:0,moved:false};
+    el.setPointerCapture&&el.setPointerCapture(e.pointerId);
+    el.addEventListener('pointermove',onMove);
+    el.addEventListener('pointerup',onDrop);
+    el.addEventListener('pointercancel',onDrop);
+  }
+
+  function onMove(e){
+    if(!drag)return;
+    drag.dx=e.clientX-drag.startX; drag.dy=e.clientY-drag.startY;
+    if(!drag.moved && Math.hypot(drag.dx,drag.dy)>6){
+      drag.moved=true;
+      drag.el.classList.add('dragging');
+      document.body.classList.add('dragging-now');
+    }
+    if(drag.moved){
+      drag.el.style.transform='translate('+drag.dx+'px,'+drag.dy+'px)';
+      highlight(e.clientX,e.clientY);
+    }
+  }
+
+  function slotAt(x,y){
+    const t=document.elementFromPoint(x,y);
+    return t?t.closest('.slot'):null;
+  }
+  function highlight(x,y){
+    const s=slotAt(x,y);
+    slotsEl.querySelectorAll('.slot').forEach(el=>el.classList.toggle('hover-target',el===s&&el.classList.contains('open')));
+  }
+
+  function onDrop(e){
+    if(!drag)return;
+    const d=drag; drag=null;
+    d.el.removeEventListener('pointermove',onMove);
+    d.el.removeEventListener('pointerup',onDrop);
+    d.el.removeEventListener('pointercancel',onDrop);
+    document.body.classList.remove('dragging-now');
+    slotsEl.querySelectorAll('.hover-target').forEach(el=>el.classList.remove('hover-target'));
+
+    if(!d.moved){ d.el.classList.remove('dragging'); return; } // just a tap-flip
+
+    const s=slotAt(e.clientX,e.clientY);
+    if(s && s.classList.contains('open') && (+s.dataset.m)*state.table===d.val){
+      placeCard(d,s);
+    }else{
+      if(s && s.classList.contains('open')){
+        s.classList.remove('wrong');void s.offsetWidth;s.classList.add('wrong');
+        state.streak=0; $('streak').textContent=0; sWrong();
+        say('🤔','Not that line — count by '+state.table+'s and try again!');
+      }
+      bounceBack(d.el);
+    }
+  }
+
+  function bounceBack(el){
+    el.classList.remove('dragging');
+    el.classList.add('returning');
+    requestAnimationFrame(()=>{el.style.transform='translate(0,0)';});
+    el.addEventListener('transitionend',function h(){
+      el.classList.remove('returning'); el.style.transform='';
+      el.removeEventListener('transitionend',h);
+    });
+  }
+
+  function placeCard(d,slot){
+    const m=+slot.dataset.m;
+    slot.classList.remove('open'); slot.classList.add('filled');
+    slot.querySelector('.fact').textContent=m+' × '+state.table+' = '+d.val;
+    d.el.classList.remove('dragging');
+    d.el.style.transform='';
+    d.el.classList.add('used');
+    state.placedCount++; state.points+=10; state.streak++;
+    state.best=Math.max(state.best,state.streak);
+    bump('points',state.points); bump('streak',state.streak); $('best').textContent=state.best;
+    sGood();
+    if(state.placedCount===9){ win(); }
+    else say('🌟','Yes! '+m+' × '+state.table+' = '+d.val+'. Keep going — '+(9-state.placedCount)+' to go!');
+  }
+
+  /* ---------- robber! ---------- */
+  function robber(){
+    state.locked=true; sRob();
+    say('🚨','The ROBBER! He grabbed your numbers — shuffling the cards…');
+    $('flash').classList.add('on');
+    const r=$('runner'); r.classList.remove('go');void r.offsetWidth;r.classList.add('go');
+    state.streak=0; $('streak').textContent=0;
+    setTimeout(()=>{
+      $('flash').classList.remove('on');
+      newRound(false);
+      say('😤','He got away this time! Grab a card and catch up.');
+    },1700);
+  }
+
+  /* ---------- win the round ---------- */
+  function win(){
+    state.locked=true;
+    state.points+=50; state.wins++;
+    bump('points',state.points); bump('wins',state.wins);
+    sWin(); confetti();
+    say('🎉','You beat the robber! All nine in order — +50 bonus! New cards coming…');
+    setTimeout(()=>{newRound(false);say('🃏','Fresh shuffle of the '+state.table+'s. Can you win again?');},2600);
+  }
+
+  function confetti(){
+    const colors=['#FFB703','#3BB273','#4C9AFF','#E5484D','#9B5DE5'];
+    for(let i=0;i<70;i++){
+      const p=document.createElement('div');
+      p.className='confetti-bit';
+      p.style.left=Math.random()*100+'vw';
+      p.style.width=p.style.height=(6+Math.random()*8)+'px';
+      p.style.background=colors[i%colors.length];
+      p.style.animationDuration=(1.4+Math.random()*1.6)+'s';
+      p.style.animationDelay=(Math.random()*.4)+'s';
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),3600);
+    }
+  }
+
+  /* ---------- header buttons ---------- */
+  $('shuffleBtn').addEventListener('click',()=>newRound(true));
+  $('soundBtn').addEventListener('click',e=>{
+    state.sound=!state.sound;
+    e.currentTarget.textContent=state.sound?'🔊 Sound':'🔇 Sound';
+  });
+  $('factBtn').addEventListener('click',e=>{
+    state.hints=!state.hints;
+    document.body.classList.toggle('hide-facts',!state.hints);
+    e.currentTarget.textContent=state.hints?'💡 Hints: On':'💡 Hints: Off';
+  });
+
+  /* ---------- go ---------- */
+  syncChips();
+  newRound(false);
+})();
+</script>
+</body>
+</html>

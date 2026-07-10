@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Double Trouble Robber — The 9 Lines Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F7FF;
+    --panel:#FFFFFF;
+    --ink:#27395D;
+    --ink-soft:#5C6E8F;
+    --sun:#FFB703;
+    --sun-deep:#F79D00;
+    --grass:#3BB273;
+    --robber:#E5484D;
+    --line:#D7E3F4;
+    --card-back:#27395D;
+    --houseA:#4C9AFF;
+    --houseA-soft:#EAF3FF;
+    --houseB:#9B5DE5;
+    --houseB-soft:#F4EDFC;
+    --radius:18px;
+    --shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(255,183,3,.10), transparent 30%),
+      radial-gradient(circle at 88% 90%, rgba(59,178,115,.10), transparent 32%),
+      var(--bg);
+    color:var(--ink);
+    padding:14px;
+    min-height:100%;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:14px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo .badge{
+    width:52px;height:52px;border-radius:16px;background:var(--card-back);
+    display:grid;place-items:center;font-size:26px;flex:none;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:clamp(20px,3.4vw,30px);font-weight:700;line-height:1.05}
+  h1 small{display:block;font-size:.52em;font-weight:500;color:var(--ink-soft)}
+  .spacer{flex:1}
+  .iconbtn{
+    border:2px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:12px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer;box-shadow:var(--shadow);
+  }
+  .iconbtn:active{transform:translateY(2px);box-shadow:none}
+
+  /* ---------- table pickers ---------- */
+  .picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .picker .label{font-weight:700;margin-right:2px;display:flex;align-items:center;gap:6px}
+  .picker.pA .label{color:var(--houseA)}
+  .picker.pB .label{color:var(--houseB)}
+  .chip{
+    width:44px;height:44px;border-radius:14px;border:2px solid var(--line);
+    background:var(--panel);color:var(--ink);font:inherit;font-size:19px;font-weight:700;
+    cursor:pointer;box-shadow:var(--shadow);transition:transform .12s;
+  }
+  .chip:hover:not(:disabled){transform:translateY(-2px)}
+  .chip:disabled{opacity:.3;cursor:default;box-shadow:none}
+  .pA .chip.on{background:var(--houseA);border-color:#2F7FE0;color:#fff}
+  .pB .chip.on{background:var(--houseB);border-color:#7E3FD1;color:#fff}
+
+  /* ---------- layout ---------- */
+  .board{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
+  .pilepanel{grid-column:1/-1}
+  .rail{grid-column:1/-1}
+  @media(max-width:620px){
+    .board{grid-template-columns:1fr}
+    .pilepanel,.rail{grid-column:1}
+  }
+  .panel{
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:14px;box-shadow:var(--shadow);
+  }
+  .panel h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .panel h2 .dot{font-size:20px}
+  .panel h2 .tag{margin-left:auto;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px}
+  .houseA-panel{border-color:#BBD8FF}
+  .houseA-panel h2 .tag{background:var(--houseA-soft);color:var(--houseA)}
+  .houseB-panel{border-color:#E0CFF7}
+  .houseB-panel h2 .tag{background:var(--houseB-soft);color:var(--houseB)}
+  .hint-line{font-size:13px;color:var(--ink-soft);margin:-4px 0 10px;font-weight:500}
+
+  /* ---------- mystery pile ---------- */
+  .pile{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:8px}
+  .card{
+    aspect-ratio:1/.85;border-radius:12px;position:relative;perspective:600px;
+    touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  }
+  .card.dragging{cursor:grabbing;z-index:40;pointer-events:none}
+  .card.returning{transition:transform .5s cubic-bezier(.2,1.6,.4,1);z-index:30}
+  .card .inner{
+    position:absolute;inset:0;border-radius:12px;transition:transform .45s;transform-style:preserve-3d;
+  }
+  .card.flipped .inner{transform:rotateY(180deg)}
+  .face{
+    position:absolute;inset:0;border-radius:12px;display:grid;place-items:center;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;font-weight:700;
+  }
+  .face.back{
+    background:var(--card-back);color:#fff;font-size:20px;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 7px, transparent 7px 14px);
+    box-shadow:0 3px 0 rgba(39,57,93,.25);
+  }
+  .card:not(.flipped):not(.used):hover .inner{transform:rotateY(12deg) translateY(-3px)}
+  .face.front{
+    background:#fff;border:2px solid var(--line);color:var(--ink);
+    transform:rotateY(180deg);font-size:22px;box-shadow:0 3px 0 rgba(39,57,93,.12);
+  }
+  .face.front.is-robber{background:#FFE9EA;border-color:var(--robber);font-size:26px}
+  .card.flipped:not(.used) .face.front{border-color:var(--sun);background:#FFF6DF}
+  .card.dragging .face.front{box-shadow:0 14px 22px rgba(39,57,93,.28);transform:rotateY(180deg) scale(1.08)}
+  .card.used{pointer-events:none;cursor:default}
+  .card.used .face.front{opacity:.3;background:#F2F7F3;border-color:#CBE7D6;color:var(--grass)}
+
+  /* ---------- correct-order grids ---------- */
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:column;grid-template-rows:repeat(3,auto);gap:10px 8px}
+  .slot{
+    padding:6px 2px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:12px;
+    border:2px dashed transparent;transition:background .15s,border-color .15s;
+  }
+  .slot .num{min-height:38px;font-size:24px;font-weight:700;display:grid;place-items:center;color:var(--ink)}
+  .slot .rule{width:84%;max-width:88px;height:3px;border-radius:3px;background:var(--ink);opacity:.85}
+  .slot .fact{font-size:12px;font-weight:600;color:var(--ink-soft);min-height:16px}
+  .slot.open .num{color:transparent}
+  body.dragging-now .slot.open{border-color:var(--line);background:#F8FBFF}
+  body.dragging-now .slot.open .rule{background:var(--sun-deep);animation:glowbar 1s ease-in-out infinite}
+  .slot.hover-target{border-color:var(--sun-deep)!important;background:#FFF6DF!important;transform:scale(1.05)}
+  @keyframes glowbar{0%,100%{opacity:.5}50%{opacity:1}}
+  .slot.filled .num{animation:pop .35s}
+  .slot.filled .fact{color:var(--grass);animation:pop .45s}
+  .slot.wrong{animation:shake .4s}
+  .slot.wrong .rule{background:var(--robber)}
+  @keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+  .hide-facts .slot.open .fact{visibility:hidden}
+  .panel.robbed{animation:robbedflash 1.4s}
+  @keyframes robbedflash{0%,100%{background:var(--panel)}30%{background:#FFE9EA}}
+
+  /* ---------- score strip ---------- */
+  .rail{display:flex;gap:10px;flex-wrap:wrap}
+  .stat{
+    flex:1;min-width:120px;
+    background:var(--panel);border:2px solid var(--line);border-radius:14px;
+    padding:6px 12px;box-shadow:var(--shadow);
+    display:flex;align-items:baseline;justify-content:center;gap:8px;
+  }
+  .stat .k{font-size:11px;font-weight:600;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .stat .v{font-size:20px;font-weight:700;line-height:1.1}
+  .stat.points{background:var(--sun);border-color:var(--sun-deep)}
+  .stat.points .k{color:#7A5200}
+  .stat.points .v{color:#4A3200}
+  .stat .v.bump{animation:pop .35s}
+
+  /* ---------- message bar ---------- */
+  .msg{
+    margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:12px 16px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;min-height:52px;
+  }
+  .msg .emo{font-size:24px}
+
+  /* ---------- robber run + overlays ---------- */
+  .runner{
+    position:fixed;top:42%;left:-120px;font-size:72px;z-index:60;pointer-events:none;display:none;
+    filter:drop-shadow(0 6px 8px rgba(39,57,93,.3));
+  }
+  .runner.go{display:block;animation:run 1.6s ease-in forwards}
+  @keyframes run{0%{left:-120px;transform:scaleX(-1) rotate(0)}50%{transform:scaleX(-1) rotate(-8deg)}100%{left:110%;transform:scaleX(-1) rotate(0)}}
+  .flash{position:fixed;inset:0;background:rgba(229,72,77,.16);z-index:50;pointer-events:none;opacity:0;transition:opacity .3s}
+  .flash.on{opacity:1}
+  .confetti-bit{position:fixed;top:-20px;z-index:70;pointer-events:none;border-radius:3px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+
+  /* ---------- how to play ---------- */
+  details{margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  summary{font-weight:700;cursor:pointer}
+  details ol{margin:10px 0 4px 20px;line-height:1.6;font-weight:500;color:var(--ink-soft)}
+  details b{color:var(--ink)}
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="badge">🦹🦹</div>
+      <h1>Double Trouble Robber<small>Two times tables at once</small></h1>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="factBtn" title="Show or hide the fact hints on empty lines">💡 Hints: On</button>
+    <button class="iconbtn" id="soundBtn" title="Sound on/off">🔊 Sound</button>
+    <button class="iconbtn" id="shuffleBtn" title="Shuffle a new round">🔀 New round</button>
+  </header>
+
+  <div class="picker pA" id="pickerA"><span class="label">🏠 Blue House:</span></div>
+  <div class="picker pB" id="pickerB"><span class="label">🏠 Purple House:</span></div>
+
+  <div class="board">
+    <aside class="rail">
+      <div class="stat points"><div class="k">⭐ Points</div><div class="v" id="points">0</div></div>
+      <div class="stat"><div class="k">🔥 Streak</div><div class="v" id="streak">0</div></div>
+      <div class="stat"><div class="k">🏆 Rounds won</div><div class="v" id="wins">0</div></div>
+      <div class="stat"><div class="k">💪 Best streak</div><div class="v" id="best">0</div></div>
+    </aside>
+
+    <section class="panel houseA-panel" id="panelA">
+      <h2><span class="dot">🏠</span> Blue House <span class="tag" id="tagA">3s</span></h2>
+      <div class="slots" id="slotsA"></div>
+    </section>
+
+    <section class="panel houseB-panel" id="panelB">
+      <h2><span class="dot">🏠</span> Purple House <span class="tag" id="tagB">4s</span></h2>
+      <div class="slots" id="slotsB"></div>
+    </section>
+
+    <section class="panel pilepanel">
+      <h2><span class="dot">🃏</span> Mystery Cards</h2>
+      <p class="hint-line">Grab a card to flip it, then drag it to the right line in the right house. One card is the robber!</p>
+      <div class="pile" id="pile"></div>
+    </section>
+  </div>
+
+  <div class="msg" id="msg"><span class="emo">👋</span><span id="msgText">Pick two times tables, then grab a mystery card to start!</span></div>
+
+  <details>
+    <summary>How to play</summary>
+    <ol>
+      <li>Choose a times table for the <b>Blue House</b> and one for the <b>Purple House</b>. All eighteen answers are shuffled into the mystery cards — <b>plus one sneaky robber!</b></li>
+      <li>Grab a card to flip it, then decide: <b>which house does this number belong to?</b> Drag it onto its line, counting in order down each column. Some numbers fit in <b>both</b> houses!</li>
+      <li>A correct drop shows the multiplication fact and earns <b>+10 points</b>. A wrong drop bounces back so you can try again.</li>
+      <li>Flip the robber and he <b>robs one house</b> — those numbers shuffle back into the pile! Fill both houses to win the round for a <b>+100 bonus</b>.</li>
+    </ol>
+  </details>
+</div>
+
+<div class="runner" id="runner">🦹💰</div>
+<div class="flash" id="flash"></div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const pileEl=$('pile'), msgText=$('msgText'), msgEmo=document.querySelector('#msg .emo');
+
+  const state = {
+    tA:3, tB:4,
+    deck:[],          // values remaining in the pile ('R' included), parallel to card DOM order
+    placedCount:0, locked:false,
+    points:0, streak:0, best:0, wins:0, sound:true, hints:true
+  };
+
+  /* ---------- tiny sounds ---------- */
+  let ctx=null;
+  function tone(freq,dur,type,vol){
+    if(!state.sound)return;
+    try{
+      ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=type||'sine';o.frequency.value=freq;
+      g.gain.setValueAtTime(vol||0.15,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+      o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+dur);
+    }catch(e){}
+  }
+  const sFlip =()=>tone(520,.09,'triangle');
+  const sGood =()=>{tone(660,.1,'sine');setTimeout(()=>tone(880,.14,'sine'),90);};
+  const sWrong=()=>tone(180,.2,'sawtooth',.08);
+  const sRob  =()=>{tone(300,.15,'square',.1);setTimeout(()=>tone(220,.2,'square',.1),140);setTimeout(()=>tone(150,.3,'square',.1),300);};
+  const sWin  =()=>[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,.18,'sine'),i*130));
+
+  /* ---------- helpers ---------- */
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function say(emo,text){msgEmo.textContent=emo;msgText.textContent=text;}
+  function bump(id,val){const el=$(id);el.textContent=val;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
+
+  /* ---------- table pickers ---------- */
+  function buildPicker(el,which){
+    for(let n=2;n<=9;n++){
+      const b=document.createElement('button');
+      b.className='chip';b.textContent=n;b.dataset.n=n;
+      b.setAttribute('aria-label','Table of '+n);
+      b.addEventListener('click',()=>{
+        if(which==='A')state.tA=n;else state.tB=n;
+        syncChips();newRound(true);
+      });
+      el.appendChild(b);
+    }
+  }
+  buildPicker($('pickerA'),'A');
+  buildPicker($('pickerB'),'B');
+  function syncChips(){
+    $('pickerA').querySelectorAll('.chip').forEach(c=>{
+      c.classList.toggle('on',+c.dataset.n===state.tA);
+      c.disabled=(+c.dataset.n===state.tB);
+    });
+    $('pickerB').querySelectorAll('.chip').forEach(c=>{
+      c.classList.toggle('on',+c.dataset.n===state.tB);
+      c.disabled=(+c.dataset.n===state.tA);
+    });
+    $('tagA').textContent=state.tA+'s';
+    $('tagB').textContent=state.tB+'s';
+  }
+
+  /* ---------- build slots for one house ---------- */
+  function buildSlots(container,table,grid){
+    container.innerHTML='';
+    for(let m=1;m<=9;m++){
+      const s=document.createElement('div');
+      s.className='slot open';
+      s.dataset.m=m; s.dataset.grid=grid; s.dataset.prod=m*table;
+      s.setAttribute('aria-label',m+' times '+table);
+      s.innerHTML='<div class="num">'+(m*table)+'</div><div class="rule"></div>'+
+                  '<div class="fact">'+m+' × '+table+'</div>';
+      container.appendChild(s);
+    }
+  }
+
+  /* ---------- build the pile from a value list ---------- */
+  function buildPile(values){
+    state.deck=values;
+    pileEl.innerHTML='';
+    values.forEach((val,i)=>{
+      const c=document.createElement('div');
+      c.className='card';
+      c.dataset.i=i;
+      c.setAttribute('role','button');
+      c.setAttribute('aria-label','Mystery card');
+      c.innerHTML='<div class="inner">'+
+        '<div class="face back">?</div>'+
+        '<div class="face front'+(val==='R'?' is-robber':'')+'">'+(val==='R'?'🦹':val)+'</div>'+
+        '</div>';
+      c.addEventListener('pointerdown',e=>onGrab(e,i,c));
+      pileEl.appendChild(c);
+    });
+  }
+
+  /* ---------- new round ---------- */
+  function newRound(announce){
+    const values=[];
+    for(let m=1;m<=9;m++){values.push(m*state.tA);values.push(m*state.tB);}
+    values.push('R');
+    shuffle(values);
+    state.placedCount=0; state.locked=false;
+    document.body.classList.remove('dragging-now');
+    buildPile(values);
+    buildSlots($('slotsA'),state.tA,'A');
+    buildSlots($('slotsB'),state.tB,'B');
+    if(announce) say('🃏','The '+state.tA+'s and '+state.tB+'s are all mixed up — and the robber is hiding. Grab a card!');
+  }
+
+  /* ---------- drag engine ---------- */
+  let drag=null;
+
+  function onGrab(e,i,el){
+    if(state.locked||el.classList.contains('used')||el.classList.contains('returning'))return;
+    if(drag)return;
+    e.preventDefault();
+
+    if(!el.classList.contains('flipped')){
+      el.classList.add('flipped'); sFlip();
+      const val=state.deck[i];
+      if(val==='R'){ setTimeout(robber,550); return; }
+      const fitsBoth = state.deck[i]%state.tA===0 && state.deck[i]%state.tB===0 &&
+                       state.deck[i]<=9*state.tA && state.deck[i]<=9*state.tB;
+      say('🔎','You found '+val+'! '+(fitsBoth?'It fits in BOTH houses — pick an open line!':'Which house does it belong to?'));
+    }
+    if(state.deck[i]==='R')return;
+
+    drag={el,val:state.deck[i],startX:e.clientX,startY:e.clientY,dx:0,dy:0,moved:false};
+    el.setPointerCapture&&el.setPointerCapture(e.pointerId);
+    el.addEventListener('pointermove',onMove);
+    el.addEventListener('pointerup',onDrop);
+    el.addEventListener('pointercancel',onDrop);
+  }
+
+  function onMove(e){
+    if(!drag)return;
+    drag.dx=e.clientX-drag.startX; drag.dy=e.clientY-drag.startY;
+    if(!drag.moved && Math.hypot(drag.dx,drag.dy)>6){
+      drag.moved=true;
+      drag.el.classList.add('dragging');
+      document.body.classList.add('dragging-now');
+    }
+    if(drag.moved){
+      drag.el.style.transform='translate('+drag.dx+'px,'+drag.dy+'px)';
+      highlight(e.clientX,e.clientY);
+    }
+  }
+
+  function slotAt(x,y){
+    const t=document.elementFromPoint(x,y);
+    return t?t.closest('.slot'):null;
+  }
+  function highlight(x,y){
+    const s=slotAt(x,y);
+    document.querySelectorAll('.slot').forEach(el=>el.classList.toggle('hover-target',el===s&&el.classList.contains('open')));
+  }
+
+  function onDrop(e){
+    if(!drag)return;
+    const d=drag; drag=null;
+    d.el.removeEventListener('pointermove',onMove);
+    d.el.removeEventListener('pointerup',onDrop);
+    d.el.removeEventListener('pointercancel',onDrop);
+    document.body.classList.remove('dragging-now');
+    document.querySelectorAll('.hover-target').forEach(el=>el.classList.remove('hover-target'));
+
+    if(!d.moved){ d.el.classList.remove('dragging'); return; }
+
+    const s=slotAt(e.clientX,e.clientY);
+    if(s && s.classList.contains('open') && +s.dataset.prod===d.val){
+      placeCard(d,s);
+    }else{
+      if(s && s.classList.contains('open')){
+        s.classList.remove('wrong');void s.offsetWidth;s.classList.add('wrong');
+        state.streak=0;$('streak').textContent=0;sWrong();
+        say('🤔','Not that line! Count down the columns — where does '+d.val+' fit?');
+      }
+      bounceBack(d.el);
+    }
+  }
+
+  function bounceBack(el){
+    el.classList.remove('dragging');
+    el.classList.add('returning');
+    requestAnimationFrame(()=>{el.style.transform='translate(0,0)';});
+    el.addEventListener('transitionend',function h(){
+      el.classList.remove('returning');el.style.transform='';
+      el.removeEventListener('transitionend',h);
+    });
+  }
+
+  function placeCard(d,slot){
+    const m=+slot.dataset.m;
+    const t=slot.dataset.grid==='A'?state.tA:state.tB;
+    slot.classList.remove('open');slot.classList.add('filled');
+    slot.dataset.val=d.val;
+    slot.querySelector('.fact').textContent=m+' × '+t+' = '+d.val;
+    d.el.classList.remove('dragging');
+    d.el.style.transform='';
+    d.el.classList.add('used');
+    d.el.dataset.placedGrid=slot.dataset.grid;
+    state.placedCount++; state.points+=10; state.streak++;
+    state.best=Math.max(state.best,state.streak);
+    bump('points',state.points);bump('streak',state.streak);$('best').textContent=state.best;
+    sGood();
+    if(state.placedCount===18){ win(); }
+    else say('🌟','Yes! '+m+' × '+t+' = '+d.val+'. Keep going — '+(18-state.placedCount)+' to go!');
+  }
+
+  /* ---------- robber robs ONE house ---------- */
+  function robber(){
+    state.locked=true; sRob();
+    state.streak=0;$('streak').textContent=0;
+
+    // pick a victim house that has at least one card placed; if neither, just reshuffle the pile
+    const placedA=[...document.querySelectorAll('#slotsA .slot.filled')];
+    const placedB=[...document.querySelectorAll('#slotsB .slot.filled')];
+    let victim=null;
+    if(placedA.length&&placedB.length)victim=Math.random()<.5?'A':'B';
+    else if(placedA.length)victim='A';
+    else if(placedB.length)victim='B';
+
+    const houseName=victim==='A'?'the Blue House':'the Purple House';
+    say('🚨',victim?('The ROBBER! He robbed '+houseName+' — those numbers are back in the pile!')
+                   :'The ROBBER! He shuffled all the cards!');
+    $('flash').classList.add('on');
+    const r=$('runner');r.classList.remove('go');void r.offsetWidth;r.classList.add('go');
+    if(victim)$('panel'+victim).classList.add('robbed');
+
+    setTimeout(()=>{
+      $('flash').classList.remove('on');
+      if(victim)$('panel'+victim).classList.remove('robbed');
+
+      // stolen values come from the victim house's filled slots
+      const stolen=victim?[...document.querySelectorAll('#slots'+victim+' .slot.filled')].map(s=>+s.dataset.val):[];
+      if(victim){
+        const t=victim==='A'?state.tA:state.tB;
+        buildSlots($('slots'+victim),t,victim);
+        state.placedCount-=stolen.length;
+      }
+      // remaining pile values (everything not yet placed, minus the robber we just flipped)
+      const remaining=[];
+      pileEl.querySelectorAll('.card').forEach(c=>{
+        const v=state.deck[+c.dataset.i];
+        if(v!=='R'&&!c.classList.contains('used'))remaining.push(v);
+      });
+      const values=shuffle(remaining.concat(stolen,['R']));
+      buildPile(values);
+      say('😤','He got away with '+(stolen.length?stolen.length+' numbers!':'nothing!')+' Grab a card and win them back.');
+      state.locked=false;
+    },1800);
+  }
+
+  /* ---------- win ---------- */
+  function win(){
+    state.locked=true;
+    state.points+=100; state.wins++;
+    bump('points',state.points);bump('wins',state.wins);
+    sWin();confetti();
+    say('🎉','You filled BOTH houses before the robber struck — +100 bonus! New cards coming…');
+    setTimeout(()=>{newRound(false);say('🃏','Fresh shuffle of the '+state.tA+'s and '+state.tB+'s. Can you do it again?');},2800);
+  }
+
+  function confetti(){
+    const colors=['#FFB703','#3BB273','#4C9AFF','#E5484D','#9B5DE5'];
+    for(let i=0;i<90;i++){
+      const p=document.createElement('div');
+      p.className='confetti-bit';
+      p.style.left=Math.random()*100+'vw';
+      p.style.width=p.style.height=(6+Math.random()*8)+'px';
+      p.style.background=colors[i%colors.length];
+      p.style.animationDuration=(1.4+Math.random()*1.6)+'s';
+      p.style.animationDelay=(Math.random()*.4)+'s';
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),3600);
+    }
+  }
+
+  /* ---------- header buttons ---------- */
+  $('shuffleBtn').addEventListener('click',()=>newRound(true));
+  $('soundBtn').addEventListener('click',e=>{
+    state.sound=!state.sound;
+    e.currentTarget.textContent=state.sound?'🔊 Sound':'🔇 Sound';
+  });
+  $('factBtn').addEventListener('click',e=>{
+    state.hints=!state.hints;
+    document.body.classList.toggle('hide-facts',!state.hints);
+    e.currentTarget.textContent=state.hints?'💡 Hints: On':'💡 Hints: Off';
+  });
+
+  /* ---------- go ---------- */
+  syncChips();
+  newRound(false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catch the Robber — The 9 Lines Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F7FF;
+    --panel:#FFFFFF;
+    --ink:#27395D;
+    --ink-soft:#5C6E8F;
+    --sun:#FFB703;
+    --sun-deep:#F79D00;
+    --grass:#3BB273;
+    --robber:#E5484D;
+    --line:#D7E3F4;
+    --card-back:#27395D;
+    --radius:18px;
+    --shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(255,183,3,.10), transparent 30%),
+      radial-gradient(circle at 88% 90%, rgba(59,178,115,.10), transparent 32%),
+      var(--bg);
+    color:var(--ink);
+    padding:14px;
+    min-height:100%;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:14px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo .badge{
+    width:52px;height:52px;border-radius:16px;background:var(--card-back);
+    display:grid;place-items:center;font-size:28px;flex:none;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:clamp(20px,3.4vw,30px);font-weight:700;line-height:1.05}
+  h1 small{display:block;font-size:.52em;font-weight:500;color:var(--ink-soft)}
+  .spacer{flex:1}
+  .iconbtn{
+    border:2px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:12px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer;box-shadow:var(--shadow);
+  }
+  .iconbtn:active{transform:translateY(2px);box-shadow:none}
+
+  /* ---------- pickers ---------- */
+  .picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .picker .label{font-weight:600;color:var(--ink-soft);margin-right:2px}
+  .chip{
+    min-width:46px;height:46px;border-radius:14px;border:2px solid var(--line);
+    background:var(--panel);color:var(--ink);font:inherit;font-size:20px;font-weight:700;
+    cursor:pointer;box-shadow:var(--shadow);transition:transform .12s;padding:0 10px;
+  }
+  .chip:hover{transform:translateY(-2px)}
+  .chip.on{background:var(--sun);border-color:var(--sun-deep);color:#5C3A00}
+  .chip.mode{font-size:14px;height:40px}
+
+  /* ---------- layout ---------- */
+  .board{display:grid;grid-template-columns:280px 1.2fr 190px;gap:14px;align-items:start}
+  @media(max-width:900px){
+    .board{grid-template-columns:1fr 1.4fr}
+    .rail{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr)}
+  }
+  @media(max-width:620px){
+    .board{grid-template-columns:1fr}
+    .rail{grid-template-columns:repeat(2,1fr)}
+  }
+  .panel{
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:14px;box-shadow:var(--shadow);
+  }
+  .panel h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .panel h2 .dot{font-size:20px}
+  .hint-line{font-size:13px;color:var(--ink-soft);margin:-4px 0 10px;font-weight:500}
+
+  /* ---------- wanted poster ---------- */
+  .poster{
+    border:3px dashed var(--sun-deep);border-radius:14px;background:#FFF9EC;
+    padding:14px 10px;text-align:center;
+  }
+  .poster .wanted{
+    font-size:13px;font-weight:700;letter-spacing:.25em;color:#7A5200;
+  }
+  .poster .fact{font-size:clamp(30px,5vw,42px);font-weight:700;margin:6px 0 2px;color:var(--ink)}
+  .poster .sub{font-size:13px;font-weight:600;color:var(--ink-soft)}
+  .poster.caught .fact{color:var(--grass)}
+  .progress{display:flex;gap:5px;justify-content:center;margin-top:12px}
+  .pip{width:12px;height:12px;border-radius:50%;background:var(--line)}
+  .pip.done{background:var(--grass)}
+  .pip.now{background:var(--sun-deep);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+  .peekbtn{
+    width:100%;margin-top:12px;border:2px solid var(--line);background:var(--panel);
+    border-radius:12px;padding:10px;font:inherit;font-weight:700;color:var(--ink);cursor:pointer;box-shadow:var(--shadow);
+  }
+  .peekbtn:disabled{opacity:.45;cursor:default;box-shadow:none}
+  .peekbtn:not(:disabled):active{transform:translateY(2px);box-shadow:none}
+  .peek-note{font-size:12px;color:var(--ink-soft);font-weight:500;text-align:center;margin-top:6px}
+
+  /* ---------- grid of hideout cards ---------- */
+  .gridwrap{position:relative}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:column;grid-template-rows:repeat(3,1fr);gap:10px}
+  .hideout{
+    aspect-ratio:1/.82;border:none;border-radius:14px;background:transparent;padding:0;font:inherit;
+    position:relative;perspective:600px;cursor:pointer;
+  }
+  .hideout .inner{
+    position:absolute;inset:0;border-radius:14px;transition:transform .45s;transform-style:preserve-3d;
+  }
+  .hideout.up .inner{transform:rotateY(180deg)}
+  .hface{
+    position:absolute;inset:0;border-radius:14px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:1px;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;font-weight:700;
+  }
+  .hface.back{
+    background:var(--card-back);color:#fff;font-size:26px;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:0 4px 0 rgba(39,57,93,.25);justify-content:center;
+  }
+  .hideout:not(.up):hover .inner{transform:rotateY(12deg) translateY(-3px)}
+  .hface.front{
+    background:#fff;border:2px solid var(--line);color:var(--ink);
+    transform:rotateY(180deg);box-shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  .hface.front .prod{font-size:clamp(22px,4vw,30px);line-height:1}
+  .hface.front .lbl{font-size:11px;font-weight:600;color:var(--ink-soft)}
+  .hideout.answered .hface.front{background:#F2F9F4;border-color:#CBE7D6}
+  .hideout.answered .hface.front .lbl{color:var(--grass)}
+  .hideout.wrong{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+  .hideout.robber-here .hface.front{background:#FFE9EA;border-color:var(--robber)}
+  .hideout.robber-here .hface.front .prod{font-size:clamp(26px,4.5vw,34px)}
+  .hideout.caught-pop{animation:pop .5s}
+  @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+  /* memorize countdown veil */
+  .veil{
+    position:absolute;inset:-4px;border-radius:14px;display:none;align-items:flex-start;justify-content:center;
+    pointer-events:none;z-index:5;
+  }
+  .veil.on{display:flex}
+  .veil .count{
+    margin-top:-6px;background:var(--sun);border:2px solid var(--sun-deep);color:#4A3200;
+    border-radius:999px;padding:6px 18px;font-weight:700;font-size:16px;box-shadow:var(--shadow);
+  }
+
+  /* ---------- score rail ---------- */
+  .rail{display:flex;flex-direction:column;gap:10px}
+  .stat{
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:10px 14px;box-shadow:var(--shadow);
+  }
+  .stat .k{font-size:12px;font-weight:600;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+  .stat .v{font-size:30px;font-weight:700;line-height:1.1}
+  .stat.points{background:var(--sun);border-color:var(--sun-deep)}
+  .stat.points .k{color:#7A5200}
+  .stat.points .v{color:#4A3200}
+  .stat .v.bump{animation:pop2 .35s}
+  @keyframes pop2{0%{transform:scale(.3)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+  /* ---------- message bar ---------- */
+  .msg{
+    margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:12px 16px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;min-height:52px;
+  }
+  .msg .emo{font-size:24px}
+
+  /* ---------- chase + overlays ---------- */
+  .chase{position:fixed;top:42%;left:-240px;z-index:60;pointer-events:none;display:none;font-size:64px;white-space:nowrap;
+    filter:drop-shadow(0 6px 8px rgba(39,57,93,.3));}
+  .chase.go{display:block;animation:chase 2s ease-in forwards}
+  @keyframes chase{0%{left:-240px}100%{left:110%}}
+  .flashblue{position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;transition:opacity .3s;
+    background:linear-gradient(90deg, rgba(76,154,255,.18), rgba(229,72,77,.18));}
+  .flashblue.on{opacity:1;animation:cop .5s steps(2) 4}
+  @keyframes cop{0%{background:linear-gradient(90deg, rgba(76,154,255,.22), rgba(229,72,77,.10))}
+                 100%{background:linear-gradient(90deg, rgba(229,72,77,.22), rgba(76,154,255,.10))}}
+  .confetti-bit{position:fixed;top:-20px;z-index:70;pointer-events:none;border-radius:3px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+
+  /* ---------- how to play ---------- */
+  details{margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  summary{font-weight:700;cursor:pointer}
+  details ol{margin:10px 0 4px 20px;line-height:1.6;font-weight:500;color:var(--ink-soft)}
+  details b{color:var(--ink)}
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="badge">🚓</div>
+      <h1>Catch the Robber<small>The 9 Lines Game</small></h1>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="soundBtn" title="Sound on/off">🔊 Sound</button>
+    <button class="iconbtn" id="newBtn" title="Start a new round">🔀 New round</button>
+  </header>
+
+  <div class="picker" id="picker">
+    <span class="label">Practice the:</span>
+  </div>
+  <div class="picker" id="modes">
+    <span class="label">Detective level:</span>
+    <button class="chip mode on" data-mode="0">🎒 Rookie</button>
+    <button class="chip mode" data-mode="1">🕵️ Detective</button>
+    <button class="chip mode" data-mode="2">🌟 Master Sleuth</button>
+  </div>
+
+  <div class="board">
+    <section class="panel">
+      <h2><span class="dot">📜</span> The Case</h2>
+      <div class="poster" id="poster">
+        <div class="wanted">★ WANTED ★</div>
+        <div class="fact" id="factText">…</div>
+        <div class="sub" id="factSub">Where is this number hiding?</div>
+      </div>
+      <div class="progress" id="progress"></div>
+      <button class="peekbtn" id="peekBtn">👀 Peek at the grid</button>
+      <p class="peek-note">A peek costs 5 points — use it wisely, detective!</p>
+    </section>
+
+    <section class="panel gridwrap">
+      <h2><span class="dot">🏘️</span> The Hideouts</h2>
+      <p class="hint-line">Tap the spot where the answer lives. The robber is behind one of them!</p>
+      <div style="position:relative">
+        <div class="cards" id="cards"></div>
+        <div class="veil" id="veil"><div class="count" id="countText">Memorize the grid… 5</div></div>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <div class="stat points"><div class="k">⭐ Points</div><div class="v" id="points">0</div></div>
+      <div class="stat"><div class="k">🔥 Streak</div><div class="v" id="streak">0</div></div>
+      <div class="stat"><div class="k">🚔 Robbers caught</div><div class="v" id="caught">0</div></div>
+      <div class="stat"><div class="k">💪 Best streak</div><div class="v" id="best">0</div></div>
+    </aside>
+  </div>
+
+  <div class="msg" id="msg"><span class="emo">👋</span><span id="msgText">Pick a times table and study the grid — the robber is about to hide!</span></div>
+
+  <details>
+    <summary>How to play</summary>
+    <ol>
+      <li>Study the grid while it's face-up — the answers count in order <b>down each column</b>, just like the 9 lines. Then the cards flip over and the robber hides behind one number!</li>
+      <li>Read the WANTED fact, like <b>4 × 5</b>, and tap the hideout where its answer lives. Right spot = the card flips up, shows the fact, and you earn <b>+10 points</b>. Wrong spot just shakes — try again!</li>
+      <li>Sooner or later you'll flip the robber's hideout — <b>GOTCHA!</b> Catching him ends the round with a <b>+50 reward</b>.</li>
+      <li>Stuck? Tap <b>Peek</b> to see the grid for 2 seconds (it costs 5 points). Level up: <b>Rookie</b> asks the facts in order, <b>Detective</b> mixes them up, and <b>Master Sleuth</b> gives no study time at all!</li>
+    </ol>
+  </details>
+</div>
+
+<div class="chase" id="chase">🚓💨&nbsp;&nbsp;🦹💰</div>
+<div class="flashblue" id="flashblue"></div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const cardsEl=$('cards'), msgText=$('msgText'), msgEmo=document.querySelector('#msg .emo');
+
+  const MODES=[
+    {name:'Rookie', shuffleFacts:false, study:6},
+    {name:'Detective', shuffleFacts:true, study:4},
+    {name:'Master Sleuth', shuffleFacts:true, study:0}
+  ];
+
+  const state={
+    table:5, mode:0, order:[], idx:0, robberM:0, answered:0,
+    locked:true, peeking:false,
+    points:0, streak:0, best:0, caught:0, sound:true
+  };
+  let timers=[];
+
+  /* ---------- tiny sounds ---------- */
+  let ctx=null;
+  function tone(freq,dur,type,vol){
+    if(!state.sound)return;
+    try{
+      ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=type||'sine';o.frequency.value=freq;
+      g.gain.setValueAtTime(vol||0.15,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+      o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+dur);
+    }catch(e){}
+  }
+  const sFlip =()=>tone(520,.09,'triangle');
+  const sGood =()=>{tone(660,.1,'sine');setTimeout(()=>tone(880,.14,'sine'),90);};
+  const sWrong=()=>tone(180,.2,'sawtooth',.08);
+  const sSiren=()=>{for(let i=0;i<6;i++)setTimeout(()=>tone(i%2?600:900,.16,'square',.08),i*160);};
+  const sWin  =()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.18,'sine'),i*130));
+  const sTick =()=>tone(880,.05,'triangle',.06);
+
+  /* ---------- helpers ---------- */
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function say(emo,text){msgEmo.textContent=emo;msgText.textContent=text;}
+  function bump(id,val){const el=$(id);el.textContent=val;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
+  function clearTimers(){timers.forEach(t=>clearTimeout(t));timers=[];}
+  function later(fn,ms){timers.push(setTimeout(fn,ms));}
+
+  /* ---------- pickers ---------- */
+  const picker=$('picker');
+  for(let n=2;n<=9;n++){
+    const b=document.createElement('button');
+    b.className='chip';b.textContent=n+'s';b.dataset.n=n;
+    b.setAttribute('aria-label','Practice the '+n+' times table');
+    b.addEventListener('click',()=>{state.table=n;syncChips();newRound();});
+    picker.appendChild(b);
+  }
+  function syncChips(){
+    picker.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.n===state.table));
+  }
+  document.querySelectorAll('#modes .mode').forEach(b=>{
+    b.addEventListener('click',()=>{
+      state.mode=+b.dataset.mode;
+      document.querySelectorAll('#modes .mode').forEach(x=>x.classList.toggle('on',x===b));
+      newRound();
+    });
+  });
+
+  /* ---------- round setup ---------- */
+  function newRound(){
+    clearTimers();
+    const mode=MODES[state.mode];
+    state.order=[1,2,3,4,5,6,7,8,9];
+    if(mode.shuffleFacts)shuffle(state.order);
+    state.idx=0; state.answered=0;
+    state.robberM=1+Math.floor(Math.random()*9);
+    state.locked=true; state.peeking=false;
+    $('poster').classList.remove('caught');
+
+    // build grid, column-major: m at DOM index i → m = (i%3)*3 + floor(i/3) + 1?  We append column-major via grid-auto-flow:column, so just append m=1..9.
+    cardsEl.innerHTML='';
+    for(let m=1;m<=9;m++){
+      const c=document.createElement('button');
+      c.className='hideout'; c.dataset.m=m;
+      c.setAttribute('aria-label','Hideout '+m);
+      const prod=m*state.table;
+      const isRob=(m===state.robberM);
+      c.innerHTML='<div class="inner">'+
+        '<div class="hface back">?</div>'+
+        '<div class="hface front'+'">'+
+          (isRob?'<div class="prod">🦹</div>':'<div class="prod">'+prod+'</div>')+
+          '<div class="lbl">'+m+' × '+state.table+' = '+prod+'</div>'+
+        '</div>'+
+      '</div>';
+      if(isRob)c.classList.add('robber-here');
+      c.addEventListener('click',()=>onTap(m,c));
+      cardsEl.appendChild(c);
+    }
+    // during study, robber card must NOT be visible — show the product on every card while studying.
+    // trick: keep robber front hidden until flip-down happens; swap content after study.
+    if(state.robberM){
+      const robCard=cardsEl.querySelector('.hideout[data-m="'+state.robberM+'"]');
+      robCard.classList.remove('robber-here');
+      robCard.querySelector('.prod').textContent=state.robberM*state.table;
+    }
+
+    renderProgress();
+    setFact(null);
+    $('peekBtn').disabled=true;
+
+    const study=mode.study;
+    if(study>0){
+      // face-up study phase
+      cardsEl.querySelectorAll('.hideout').forEach(c=>c.classList.add('up'));
+      $('veil').classList.add('on');
+      let left=study;
+      $('countText').textContent='Memorize the grid… '+left;
+      say('🧠','Study the grid! The numbers count by '+state.table+'s down each column.');
+      const tick=()=>{
+        left--;
+        if(left>0){$('countText').textContent='Memorize the grid… '+left;sTick();later(tick,1000);}
+        else{startHunt();}
+      };
+      later(tick,1000);
+    }else{
+      say('🌟','Master Sleuth: no study time! You know where every number lives. Go!');
+      startHunt();
+    }
+  }
+
+  function startHunt(){
+    $('veil').classList.remove('on');
+    cardsEl.querySelectorAll('.hideout').forEach(c=>c.classList.remove('up'));
+    // now that cards are face-down, arm the robber card's hidden face
+    const robCard=cardsEl.querySelector('.hideout[data-m="'+state.robberM+'"]');
+    later(()=>{ // wait for flip-down to finish so the swap is invisible
+      robCard.classList.add('robber-here');
+      robCard.querySelector('.prod').textContent='🦹';
+      state.locked=false;
+      $('peekBtn').disabled=false;
+      setFact(state.order[state.idx]);
+      say('🕵️','The robber is hiding! Find the WANTED number.');
+    },500);
+  }
+
+  /* ---------- fact poster + progress ---------- */
+  function setFact(m){
+    if(m===null){$('factText').textContent='…';$('factSub').textContent='Get ready…';return;}
+    $('factText').textContent=m+' × '+state.table;
+    $('factSub').textContent='Where is this number hiding?';
+    renderProgress();
+  }
+  function renderProgress(){
+    const p=$('progress');p.innerHTML='';
+    for(let i=0;i<9;i++){
+      const d=document.createElement('div');
+      d.className='pip'+(i<state.idx?' done':i===state.idx&&!state.locked?' now':'');
+      p.appendChild(d);
+    }
+  }
+
+  /* ---------- gameplay ---------- */
+  function onTap(m,el){
+    if(state.locked||state.peeking||el.classList.contains('answered')||el.classList.contains('up'))return;
+    const target=state.order[state.idx];
+    if(m===target){
+      el.classList.add('up');
+      sFlip();
+      if(m===state.robberM){ later(()=>caughtHim(el),450); return; }
+      el.classList.add('answered');
+      state.idx++; state.answered++;
+      state.points+=10; state.streak++;
+      state.best=Math.max(state.best,state.streak);
+      bump('points',state.points);bump('streak',state.streak);$('best').textContent=state.best;
+      sGood();
+      setFact(state.order[state.idx]);
+      say('🌟','Yes! '+m+' × '+state.table+' = '+(m*state.table)+'. Next case!');
+    }else{
+      el.classList.remove('wrong');void el.offsetWidth;el.classList.add('wrong');
+      state.streak=0;$('streak').textContent=0;sWrong();
+      say('🤔','Not that hideout! '+target+' × '+state.table+' — count down the columns by '+state.table+'s.');
+    }
+  }
+
+  function caughtHim(el){
+    state.locked=true;
+    el.classList.add('caught-pop');
+    $('poster').classList.add('caught');
+    $('factText').textContent='GOTCHA!';
+    $('factSub').textContent='You caught the robber!';
+    $('peekBtn').disabled=true;
+    state.points+=60; state.streak++; state.caught++;
+    state.best=Math.max(state.best,state.streak);
+    bump('points',state.points);bump('caught',state.caught);
+    bump('streak',state.streak);$('best').textContent=state.best;
+    sSiren();later(sWin,900);
+    const ch=$('chase');ch.classList.remove('go');void ch.offsetWidth;ch.classList.add('go');
+    $('flashblue').classList.add('on');
+    confetti();
+    say('🚔','GOTCHA! He was hiding behind '+(state.robberM)+' × '+state.table+' = '+(state.robberM*state.table)+'. +60 reward!');
+    later(()=>{$('flashblue').classList.remove('on');},2200);
+    later(()=>{newRound();},3000);
+  }
+
+  /* ---------- peek ---------- */
+  $('peekBtn').addEventListener('click',()=>{
+    if(state.locked||state.peeking)return;
+    state.peeking=true;
+    state.points=Math.max(0,state.points-5);
+    bump('points',state.points);
+    $('peekBtn').disabled=true;
+    // show every card EXCEPT the robber's hideout (that would spoil the hunt) —
+    // his card peeks as the number too, so briefly swap it back
+    const robCard=cardsEl.querySelector('.hideout[data-m="'+state.robberM+'"]');
+    robCard.classList.remove('robber-here');
+    robCard.querySelector('.prod').textContent=state.robberM*state.table;
+    cardsEl.querySelectorAll('.hideout:not(.answered)').forEach(c=>c.classList.add('up'));
+    sFlip();
+    say('👀','Quick peek, detective! Memorize it…');
+    later(()=>{
+      cardsEl.querySelectorAll('.hideout:not(.answered)').forEach(c=>c.classList.remove('up'));
+      later(()=>{
+        robCard.classList.add('robber-here');
+        robCard.querySelector('.prod').textContent='🦹';
+        state.peeking=false;
+        $('peekBtn').disabled=false;
+        say('🕵️','Back to the case: where is '+state.order[state.idx]+' × '+state.table+'?');
+      },500);
+    },2000);
+  });
+
+  /* ---------- confetti ---------- */
+  function confetti(){
+    const colors=['#FFB703','#3BB273','#4C9AFF','#E5484D','#9B5DE5'];
+    for(let i=0;i<70;i++){
+      const p=document.createElement('div');
+      p.className='confetti-bit';
+      p.style.left=Math.random()*100+'vw';
+      p.style.width=p.style.height=(6+Math.random()*8)+'px';
+      p.style.background=colors[i%colors.length];
+      p.style.animationDuration=(1.4+Math.random()*1.6)+'s';
+      p.style.animationDelay=(Math.random()*.4)+'s';
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),3600);
+    }
+  }
+
+  /* ---------- header buttons ---------- */
+  $('newBtn').addEventListener('click',newRound);
+  $('soundBtn').addEventListener('click',e=>{
+    state.sound=!state.sound;
+    e.currentTarget.textContent=state.sound?'🔊 Sound':'🔇 Sound';
+  });
+
+  /* ---------- go ---------- */
+  syncChips();
+  newRound();
+})();
+</script>
+</body>
+</html>

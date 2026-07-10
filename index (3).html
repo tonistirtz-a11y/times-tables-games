@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 9 Lines Games — Times Table Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F7FF;
+    --panel:#FFFFFF;
+    --ink:#27395D;
+    --ink-soft:#5C6E8F;
+    --sun:#FFB703;
+    --sun-deep:#F79D00;
+    --line:#D7E3F4;
+    --card-back:#27395D;
+    --shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(255,183,3,.10), transparent 30%),
+      radial-gradient(circle at 88% 90%, rgba(59,178,115,.10), transparent 32%),
+      var(--bg);
+    color:var(--ink);
+    padding:14px;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+
+  header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .badge{
+    width:52px;height:52px;border-radius:16px;background:var(--card-back);
+    display:grid;place-items:center;font-size:28px;flex:none;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:clamp(20px,3.4vw,30px);font-weight:700;line-height:1.05}
+  h1 small{display:block;font-size:.52em;font-weight:500;color:var(--ink-soft)}
+
+  .jump{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .jump a{
+    text-decoration:none;color:var(--ink);background:var(--panel);
+    border:2px solid var(--line);border-radius:999px;padding:8px 16px;
+    font-weight:600;font-size:14px;box-shadow:var(--shadow);display:flex;align-items:center;gap:6px;
+  }
+  .jump a:hover{background:#FFF6DF;border-color:var(--sun-deep)}
+
+  .game{margin-bottom:30px}
+  .game-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .game-head .emo{font-size:26px}
+  .game-head h2{font-size:clamp(18px,2.6vw,24px);font-weight:700}
+  .game-head p{font-size:14px;font-weight:500;color:var(--ink-soft)}
+  .frame{
+    width:100%;height:930px;border:2px solid var(--line);border-radius:18px;
+    background:var(--panel);box-shadow:var(--shadow);margin-top:8px;
+  }
+  #g2 .frame{height:1000px}
+  @media(max-width:640px){
+    .frame{height:1180px}
+    #g2 .frame{height:1350px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">🦹</div>
+    <h1>The 9 Lines Games<small>Times table practice · Smart &amp; Special Teaching</small></h1>
+  </header>
+
+  <nav class="jump">
+    <a href="#g1">🃏 Times Table Robber</a>
+    <a href="#g2">🏠 Double Trouble</a>
+    <a href="#g3">🚓 Catch the Robber</a>
+  </nav>
+
+  <section class="game" id="g1">
+    <div class="game-head">
+      <span class="emo">🃏</span>
+      <h2>Times Table Robber</h2>
+      <p>Drag the numbers into order before the robber strikes!</p>
+    </div>
+    <iframe class="frame" src="times-table-robber.html" title="Times Table Robber game"></iframe>
+  </section>
+
+  <section class="game" id="g2">
+    <div class="game-head">
+      <span class="emo">🏠</span>
+      <h2>Double Trouble</h2>
+      <p>Two tables, two houses — sort every number home!</p>
+    </div>
+    <iframe class="frame" src="double-trouble-robber.html" title="Double Trouble Robber game" loading="lazy"></iframe>
+  </section>
+
+  <section class="game" id="g3">
+    <div class="game-head">
+      <span class="emo">🚓</span>
+      <h2>Catch the Robber</h2>
+      <p>Memorize the grid, find the facts, catch him hiding!</p>
+    </div>
+    <iframe class="frame" src="catch-the-robber.html" title="Catch the Robber game" loading="lazy"></iframe>
+  </section>
+</div>
+</body>
+</html>

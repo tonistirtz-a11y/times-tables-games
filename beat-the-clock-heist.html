@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beat the Clock Heist — The 9 Lines Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F7FF;
+    --panel:#FFFFFF;
+    --ink:#27395D;
+    --ink-soft:#5C6E8F;
+    --sun:#FFB703;
+    --sun-deep:#F79D00;
+    --grass:#3BB273;
+    --robber:#E5484D;
+    --line:#D7E3F4;
+    --card-back:#27395D;
+    --radius:18px;
+    --shadow:0 4px 0 rgba(39,57,93,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(255,183,3,.10), transparent 30%),
+      radial-gradient(circle at 88% 90%, rgba(59,178,115,.10), transparent 32%),
+      var(--bg);
+    color:var(--ink);
+    padding:14px;
+    min-height:100%;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1000px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:14px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo .badge{
+    width:52px;height:52px;border-radius:16px;background:var(--card-back);
+    display:grid;place-items:center;font-size:26px;flex:none;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px);
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:clamp(20px,3.4vw,30px);font-weight:700;line-height:1.05}
+  h1 small{display:block;font-size:.52em;font-weight:500;color:var(--ink-soft)}
+  .spacer{flex:1}
+  .iconbtn{
+    border:2px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:12px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer;box-shadow:var(--shadow);
+  }
+  .iconbtn:active{transform:translateY(2px);box-shadow:none}
+
+  /* ---------- pickers ---------- */
+  .picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .picker .label{font-weight:600;color:var(--ink-soft);margin-right:2px}
+  .chip{
+    min-width:44px;height:44px;border-radius:14px;border:2px solid var(--line);
+    background:var(--panel);color:var(--ink);font:inherit;font-size:19px;font-weight:700;
+    cursor:pointer;box-shadow:var(--shadow);transition:transform .12s;padding:0 10px;
+  }
+  .chip:hover{transform:translateY(-2px)}
+  .chip.on{background:var(--sun);border-color:var(--sun-deep);color:#5C3A00}
+  .chip.mode{font-size:14px;height:40px}
+
+  /* ---------- score strip ---------- */
+  .rail{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .stat{
+    flex:1;min-width:120px;
+    background:var(--panel);border:2px solid var(--line);border-radius:14px;
+    padding:6px 12px;box-shadow:var(--shadow);
+    display:flex;align-items:baseline;justify-content:center;gap:8px;
+  }
+  .stat .k{font-size:11px;font-weight:600;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .stat .v{font-size:20px;font-weight:700;line-height:1.1}
+  .stat.points{background:var(--sun);border-color:var(--sun-deep)}
+  .stat.points .k{color:#7A5200}
+  .stat.points .v{color:#4A3200}
+  .stat .v.bump{animation:pop .35s}
+  @keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+  /* ---------- layout ---------- */
+  .board{display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start}
+  @media(max-width:680px){.board{grid-template-columns:1fr}}
+  .panel{
+    background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:14px;box-shadow:var(--shadow);
+  }
+  .panel h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .panel h2 .dot{font-size:20px}
+  .hint-line{font-size:13px;color:var(--ink-soft);margin:-4px 0 10px;font-weight:500}
+
+  /* ---------- vault ---------- */
+  .vault{text-align:center}
+  .vault .scene{font-size:56px;line-height:1.1;margin:4px 0 8px}
+  .vault .scene .crack{display:inline-block;animation:wobble 1s ease-in-out infinite}
+  .vault.paused .scene .crack{animation:none}
+  @keyframes wobble{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  .timer{
+    font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;
+  }
+  .timer.hurry{color:var(--robber);animation:pulse .5s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .bar{
+    height:14px;border-radius:999px;background:#EDF3FC;border:2px solid var(--line);
+    overflow:hidden;margin:10px 0 4px;
+  }
+  .bar .fill{height:100%;background:var(--grass);border-radius:999px;transition:width .25s linear}
+  .bar .fill.mid{background:var(--sun-deep)}
+  .bar .fill.low{background:var(--robber)}
+  .vault-note{font-size:12px;font-weight:600;color:var(--ink-soft)}
+  .startbtn{
+    width:100%;margin-top:12px;border:2px solid var(--sun-deep);background:var(--sun);
+    border-radius:14px;padding:12px;font:inherit;font-weight:700;font-size:17px;color:#4A3200;
+    cursor:pointer;box-shadow:var(--shadow);
+  }
+  .startbtn:active{transform:translateY(2px);box-shadow:none}
+  .startbtn:disabled{opacity:.5;cursor:default;box-shadow:none}
+
+  /* ---------- grid ---------- */
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:column;grid-template-rows:repeat(3,auto);gap:12px 8px;margin-bottom:12px}
+  .slot{
+    padding:6px 2px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:12px;
+    border:2px dashed transparent;transition:background .15s,border-color .15s;
+  }
+  .slot .num{min-height:42px;font-size:27px;font-weight:700;display:grid;place-items:center;color:var(--ink)}
+  .slot .rule{width:82%;max-width:92px;height:3px;border-radius:3px;background:var(--ink);opacity:.85}
+  .slot .fact{font-size:12px;font-weight:600;color:var(--ink-soft);min-height:16px}
+  .slot.open .num{color:transparent}
+  .slot.next{border-color:var(--sun-deep);background:#FFF6DF}
+  .slot.next .rule{background:var(--sun-deep);animation:glowbar 1s ease-in-out infinite}
+  @keyframes glowbar{0%,100%{opacity:.5}50%{opacity:1}}
+  .slot.filled .num{animation:pop .35s}
+  .slot.filled .fact{color:var(--grass)}
+  .hide-facts .slot.open .fact{visibility:hidden}
+
+  /* ---------- number bank ---------- */
+  .bank{display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+  @media(max-width:680px){.bank{grid-template-columns:repeat(5,1fr)}}
+  .key{
+    aspect-ratio:1/.9;border-radius:12px;border:2px solid var(--line);background:#fff;
+    font:inherit;font-size:clamp(16px,2.6vw,22px);font-weight:700;color:var(--ink);cursor:pointer;
+    box-shadow:0 3px 0 rgba(39,57,93,.12);transition:transform .1s;
+  }
+  .key:hover:not(:disabled){transform:translateY(-2px)}
+  .key:active:not(:disabled){transform:translateY(1px)}
+  .key:disabled{opacity:.25;cursor:default;box-shadow:none}
+  .key.zap{animation:shake .35s;border-color:var(--robber);background:#FFE9EA}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+
+  /* ---------- message bar ---------- */
+  .msg{
+    margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);
+    padding:12px 16px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;min-height:52px;
+  }
+  .msg .emo{font-size:24px}
+
+  /* ---------- overlays ---------- */
+  .flash{position:fixed;inset:0;background:rgba(229,72,77,.18);z-index:50;pointer-events:none;opacity:0;transition:opacity .3s}
+  .flash.on{opacity:1}
+  .runner{
+    position:fixed;top:40%;left:-140px;font-size:64px;z-index:60;pointer-events:none;display:none;
+    filter:drop-shadow(0 6px 8px rgba(39,57,93,.3));
+  }
+  .runner.go{display:block;animation:run 1.6s ease-in forwards}
+  @keyframes run{0%{left:-140px;transform:scaleX(-1)}100%{left:110%;transform:scaleX(-1)}}
+  .confetti-bit{position:fixed;top:-20px;z-index:70;pointer-events:none;border-radius:3px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+
+  /* ---------- how to play ---------- */
+  details{margin-top:14px;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  summary{font-weight:700;cursor:pointer}
+  details ol{margin:10px 0 4px 20px;line-height:1.6;font-weight:500;color:var(--ink-soft)}
+  details b{color:var(--ink)}
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="badge">⏱️</div>
+      <h1>Beat the Clock Heist<small>The 9 Lines Game</small></h1>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="factBtn" title="Show or hide the fact hints">💡 Hints: On</button>
+    <button class="iconbtn" id="soundBtn" title="Sound on/off">🔊 Sound</button>
+  </header>
+
+  <div class="picker" id="picker"><span class="label">Practice the:</span></div>
+  <div class="picker" id="modes">
+    <span class="label">Timer:</span>
+    <button class="chip mode" data-mode="0">🐢 Easy · 90s</button>
+    <button class="chip mode on" data-mode="1">⏱️ Normal · 60s</button>
+    <button class="chip mode" data-mode="2">🔥 Hard · 40s</button>
+    <button class="chip mode" data-mode="3">🧘 Practice · no timer</button>
+  </div>
+
+  <div class="rail">
+    <div class="stat points"><div class="k">⭐ Points</div><div class="v" id="points">0</div></div>
+    <div class="stat"><div class="k">🔒 Heists foiled</div><div class="v" id="foiled">0</div></div>
+    <div class="stat"><div class="k">🏅 Best time</div><div class="v" id="bestTime">—</div></div>
+    <div class="stat"><div class="k">⏰ This run</div><div class="v" id="runTime">—</div></div>
+  </div>
+
+  <div class="board">
+    <section class="panel vault" id="vaultPanel">
+      <h2 style="justify-content:center"><span class="dot">🏦</span> The Vault</h2>
+      <div class="scene"><span class="crack" id="crackEmo">🦹</span>🔐</div>
+      <div class="timer" id="timer">60</div>
+      <div class="bar"><div class="fill" id="fill" style="width:100%"></div></div>
+      <div class="vault-note" id="vaultNote">Fill the grid in order before he cracks the safe!</div>
+      <button class="startbtn" id="startBtn">🚨 Start the heist!</button>
+    </section>
+
+    <section class="panel">
+      <h2><span class="dot">✅</span> The Grid</h2>
+      <p class="hint-line">Tap the numbers in counting order — the glowing line shows what's next.</p>
+      <div class="slots" id="slots"></div>
+      <div class="bank" id="bank"></div>
+    </section>
+  </div>
+
+  <div class="msg" id="msg"><span class="emo">👋</span><span id="msgText">Pick a times table and press Start — can you lock the vault in time?</span></div>
+
+  <details>
+    <summary>How to play</summary>
+    <ol>
+      <li>The robber is cracking the safe! Press <b>Start</b> and the countdown begins.</li>
+      <li>Fill the grid <b>in counting order</b> (1×, 2×, 3×…): the glowing line shows which fact is next — tap its answer in the number row below. Numbers go <b>down each column</b>, just like the 9 lines.</li>
+      <li>Each correct tap is <b>+10 points</b>. A wrong tap costs <b>2 seconds</b> — so think, don't guess!</li>
+      <li>Fill all nine before time runs out to <b>slam the vault shut</b>: +50 bonus plus 2 points for every second left. Beat your own <b>best time</b>! Choose 🧘 Practice for no timer at all.</li>
+    </ol>
+  </details>
+</div>
+
+<div class="flash" id="flash"></div>
+<div class="runner" id="runner">🦹💰</div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const slotsEl=$('slots'), bankEl=$('bank'), msgText=$('msgText'), msgEmo=document.querySelector('#msg .emo');
+
+  const MODES=[
+    {label:'easy',secs:90},
+    {label:'normal',secs:60},
+    {label:'hard',secs:40},
+    {label:'practice',secs:0}
+  ];
+
+  const state={
+    table:5, mode:1,
+    next:1, running:false,
+    startAt:0, deadline:0, elapsed:0,
+    points:0, foiled:0, sound:true, hints:true
+  };
+  let tickId=null;
+
+  /* ---------- best times (saved in the browser when available) ---------- */
+  function loadBests(){try{return JSON.parse(localStorage.getItem('heist-best')||'{}')}catch(e){return {}}}
+  function saveBests(b){try{localStorage.setItem('heist-best',JSON.stringify(b))}catch(e){}}
+  function bestKey(){return state.table+'-'+MODES[state.mode].label}
+  function showBest(){
+    const b=loadBests()[bestKey()];
+    $('bestTime').textContent=b?b.toFixed(1)+'s':'—';
+  }
+
+  /* ---------- tiny sounds ---------- */
+  let ctx=null;
+  function tone(freq,dur,type,vol){
+    if(!state.sound)return;
+    try{
+      ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=type||'sine';o.frequency.value=freq;
+      g.gain.setValueAtTime(vol||0.15,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+      o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+dur);
+    }catch(e){}
+  }
+  const sGood =()=>{tone(660,.08,'sine');setTimeout(()=>tone(880,.1,'sine'),70);};
+  const sWrong=()=>tone(180,.2,'sawtooth',.08);
+  const sTick =()=>tone(1000,.05,'triangle',.07);
+  const sAlarm=()=>{for(let i=0;i<5;i++)setTimeout(()=>tone(i%2?500:700,.18,'square',.1),i*180);};
+  const sClang=()=>{tone(200,.3,'square',.12);setTimeout(()=>tone(150,.4,'square',.1),120);};
+  const sWin  =()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.18,'sine'),i*130));
+
+  /* ---------- helpers ---------- */
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function say(emo,text){msgEmo.textContent=emo;msgText.textContent=text;}
+  function bump(id,val){const el=$(id);el.textContent=val;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
+
+  /* ---------- pickers ---------- */
+  const picker=$('picker');
+  for(let n=2;n<=9;n++){
+    const b=document.createElement('button');
+    b.className='chip';b.textContent=n+'s';b.dataset.n=n;
+    b.setAttribute('aria-label','Practice the '+n+' times table');
+    b.addEventListener('click',()=>{state.table=n;syncChips();resetRound();});
+    picker.appendChild(b);
+  }
+  function syncChips(){
+    picker.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.n===state.table));
+  }
+  document.querySelectorAll('#modes .mode').forEach(b=>{
+    b.addEventListener('click',()=>{
+      state.mode=+b.dataset.mode;
+      document.querySelectorAll('#modes .mode').forEach(x=>x.classList.toggle('on',x===b));
+      resetRound();
+    });
+  });
+
+  /* ---------- build round (idle until Start) ---------- */
+  function resetRound(){
+    stopTimer();
+    state.next=1; state.running=false;
+    slotsEl.innerHTML='';
+    for(let m=1;m<=9;m++){
+      const s=document.createElement('div');
+      s.className='slot open';
+      s.dataset.m=m;
+      s.innerHTML='<div class="num">'+(m*state.table)+'</div><div class="rule"></div>'+
+                  '<div class="fact">'+m+' × '+state.table+'</div>';
+      slotsEl.appendChild(s);
+    }
+    bankEl.innerHTML='';
+    shuffle([1,2,3,4,5,6,7,8,9].map(m=>m*state.table)).forEach(v=>{
+      const k=document.createElement('button');
+      k.className='key'; k.textContent=v; k.dataset.v=v; k.disabled=true;
+      k.addEventListener('click',()=>onKey(v,k));
+      bankEl.appendChild(k);
+    });
+    const secs=MODES[state.mode].secs;
+    $('timer').textContent=secs?secs:'∞';
+    $('timer').classList.remove('hurry');
+    $('fill').style.width='100%';
+    $('fill').className='fill';
+    $('runTime').textContent='—';
+    $('vaultPanel').classList.add('paused');
+    $('startBtn').disabled=false;
+    $('vaultNote').textContent=secs?'Fill the grid in order before he cracks the safe!':'No timer — take your time and go for accuracy!';
+    showBest();
+    say('🃏','Ready when you are! Press Start and fill the '+state.table+'s in order.');
+  }
+
+  /* ---------- start ---------- */
+  $('startBtn').addEventListener('click',()=>{
+    if(state.running)return;
+    state.running=true;
+    state.startAt=Date.now();
+    const secs=MODES[state.mode].secs;
+    state.deadline=secs?state.startAt+secs*1000:0;
+    $('startBtn').disabled=true;
+    $('vaultPanel').classList.remove('paused');
+    bankEl.querySelectorAll('.key').forEach(k=>k.disabled=false);
+    markNext();
+    say('🚨','GO! First up: 1 × '+state.table+'!');
+    if(secs)startTimer();
+  });
+
+  function markNext(){
+    slotsEl.querySelectorAll('.slot').forEach(s=>{
+      s.classList.toggle('next',+s.dataset.m===state.next&&s.classList.contains('open'));
+    });
+  }
+
+  /* ---------- timer ---------- */
+  function startTimer(){
+    tickId=setInterval(()=>{
+      const total=MODES[state.mode].secs*1000;
+      const left=Math.max(0,state.deadline-Date.now());
+      const s=Math.ceil(left/1000);
+      $('timer').textContent=s;
+      const pct=left/total*100;
+      const f=$('fill');
+      f.style.width=pct+'%';
+      f.className='fill'+(pct<25?' low':pct<55?' mid':'');
+      $('timer').classList.toggle('hurry',s<=10);
+      if(s<=5&&s>0)sTick();
+      if(left<=0)cracked();
+    },250);
+  }
+  function stopTimer(){if(tickId){clearInterval(tickId);tickId=null;}}
+
+  /* ---------- gameplay ---------- */
+  function onKey(v,el){
+    if(!state.running)return;
+    const target=state.next*state.table;
+    if(v===target){
+      el.disabled=true;
+      const slot=slotsEl.querySelector('.slot[data-m="'+state.next+'"]');
+      slot.classList.remove('open','next');slot.classList.add('filled');
+      slot.querySelector('.fact').textContent=state.next+' × '+state.table+' = '+v;
+      state.points+=10;bump('points',state.points);
+      sGood();
+      state.next++;
+      if(state.next>9){foilHeist();return;}
+      markNext();
+    }else{
+      el.classList.remove('zap');void el.offsetWidth;el.classList.add('zap');
+      sWrong();
+      if(state.deadline){
+        state.deadline-=2000;
+        say('⚡','Oops! −2 seconds. You need '+state.next+' × '+state.table+'!');
+      }else{
+        say('🤔','Not yet! You need '+state.next+' × '+state.table+' — count by '+state.table+'s.');
+      }
+    }
+  }
+
+  /* ---------- win ---------- */
+  function foilHeist(){
+    state.running=false;stopTimer();
+    const elapsed=(Date.now()-state.startAt)/1000;
+    $('runTime').textContent=elapsed.toFixed(1)+'s';
+    const secsLeft=state.deadline?Math.max(0,Math.floor((state.deadline-Date.now())/1000)):0;
+    const bonus=50+secsLeft*2;
+    state.points+=bonus;state.foiled++;
+    bump('points',state.points);bump('foiled',state.foiled);
+    $('vaultPanel').classList.add('paused');
+    $('crackEmo').textContent='🚔';
+    sClang();setTimeout(sWin,400);confetti();
+
+    // best time
+    let newBest=false;
+    if(MODES[state.mode].secs){
+      const bests=loadBests(),k=bestKey();
+      if(!bests[k]||elapsed<bests[k]){bests[k]=elapsed;saveBests(bests);newBest=true;}
+      showBest();
+    }
+    say('🎉','CLANG! Vault locked in '+elapsed.toFixed(1)+' seconds — +'+bonus+' points!'+(newBest?' 🏅 NEW BEST TIME!':''));
+    setTimeout(()=>{$('crackEmo').textContent='🦹';resetRound();},3000);
+  }
+
+  /* ---------- lose ---------- */
+  function cracked(){
+    state.running=false;stopTimer();
+    $('timer').textContent='0';
+    $('fill').style.width='0%';
+    sAlarm();
+    $('flash').classList.add('on');
+    const r=$('runner');r.classList.remove('go');void r.offsetWidth;r.classList.add('go');
+    say('💨','He cracked the safe and got away! Press Start to try again — you\'ve got this.');
+    setTimeout(()=>{
+      $('flash').classList.remove('on');
+      resetRound();
+    },2200);
+  }
+
+  /* ---------- confetti ---------- */
+  function confetti(){
+    const colors=['#FFB703','#3BB273','#4C9AFF','#E5484D','#9B5DE5'];
+    for(let i=0;i<70;i++){
+      const p=document.createElement('div');
+      p.className='confetti-bit';
+      p.style.left=Math.random()*100+'vw';
+      p.style.width=p.style.height=(6+Math.random()*8)+'px';
+      p.style.background=colors[i%colors.length];
+      p.style.animationDuration=(1.4+Math.random()*1.6)+'s';
+      p.style.animationDelay=(Math.random()*.4)+'s';
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),3600);
+    }
+  }
+
+  /* ---------- header buttons ---------- */
+  $('soundBtn').addEventListener('click',e=>{
+    state.sound=!state.sound;
+    e.currentTarget.textContent=state.sound?'🔊 Sound':'🔇 Sound';
+  });
+  $('factBtn').addEventListener('click',e=>{
+    state.hints=!state.hints;
+    document.body.classList.toggle('hide-facts',!state.hints);
+    e.currentTarget.textContent=state.hints?'💡 Hints: On':'💡 Hints: Off';
+  });
+
+  /* ---------- go ---------- */
+  syncChips();
+  resetRound();
+})();
+</script>
+</body>
+</html>

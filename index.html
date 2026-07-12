@@ -20,7 +20,6 @@
     --shadow:0 4px 0 rgba(39,57,93,.12);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html{scroll-behavior:smooth}
   body{
     font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',sans-serif;
     background:
@@ -42,28 +41,25 @@
   h1{font-size:clamp(20px,3.4vw,30px);font-weight:700;line-height:1.05}
   h1 small{display:block;font-size:.52em;font-weight:500;color:var(--ink-soft)}
 
-  .jump{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
-  .jump a{
-    text-decoration:none;color:var(--ink);background:var(--panel);
-    border:2px solid var(--line);border-radius:999px;padding:8px 16px;
-    font-weight:600;font-size:14px;box-shadow:var(--shadow);display:flex;align-items:center;gap:6px;
+  .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px}
+  .tab{
+    border:2px solid var(--line);background:var(--panel);border-radius:16px;
+    padding:10px 12px;font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow);
+    display:flex;align-items:center;gap:10px;transition:transform .12s;
   }
-  .jump a:hover{background:#FFF6DF;border-color:var(--sun-deep)}
+  .tab:hover{transform:translateY(-2px)}
+  .tab .emo{font-size:26px;flex:none}
+  .tab .t{font-weight:700;font-size:14px}
+  .tab .d{font-weight:500;font-size:11.5px;color:var(--ink-soft)}
+  .tab.on{background:var(--sun);border-color:var(--sun-deep)}
+  .tab.on .t{color:#4A3200}
+  .tab.on .d{color:#7A5200}
 
-  .game{margin-bottom:30px}
-  .game-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
-  .game-head .emo{font-size:26px}
-  .game-head h2{font-size:clamp(18px,2.6vw,24px);font-weight:700}
-  .game-head p{font-size:14px;font-weight:500;color:var(--ink-soft)}
   .frame{
-    width:100%;height:930px;border:2px solid var(--line);border-radius:18px;
-    background:var(--panel);box-shadow:var(--shadow);margin-top:8px;
+    width:100%;height:940px;border:2px solid var(--line);border-radius:18px;
+    background:var(--panel);box-shadow:var(--shadow);
   }
-  #g2 .frame{height:1000px}
-  @media(max-width:640px){
-    .frame{height:1180px}
-    #g2 .frame{height:1350px}
-  }
+  @media(max-width:640px){.frame{height:1200px}}
 </style>
 </head>
 <body>
@@ -73,38 +69,43 @@
     <h1>The 9 Lines Games<small>Times table practice · Smart &amp; Special Teaching</small></h1>
   </header>
 
-  <nav class="jump">
-    <a href="#g1">🃏 Times Table Robber</a>
-    <a href="#g2">🏠 Double Trouble</a>
-    <a href="#g3">🚓 Catch the Robber</a>
-  </nav>
-
-  <section class="game" id="g1">
-    <div class="game-head">
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-src="times-table-robber.html">
       <span class="emo">🃏</span>
-      <h2>Times Table Robber</h2>
-      <p>Drag the numbers into order before the robber strikes!</p>
-    </div>
-    <iframe class="frame" src="times-table-robber.html" title="Times Table Robber game"></iframe>
-  </section>
-
-  <section class="game" id="g2">
-    <div class="game-head">
+      <span><span class="t">Times Table Robber</span><br>
+      <span class="d">Drag the numbers into order before the robber strikes!</span></span>
+    </button>
+    <button class="tab" data-src="double-trouble-robber.html">
       <span class="emo">🏠</span>
-      <h2>Double Trouble</h2>
-      <p>Two tables, two houses — sort every number home!</p>
-    </div>
-    <iframe class="frame" src="double-trouble-robber.html" title="Double Trouble Robber game" loading="lazy"></iframe>
-  </section>
-
-  <section class="game" id="g3">
-    <div class="game-head">
+      <span><span class="t">Double Trouble</span><br>
+      <span class="d">Two tables, two houses — sort every number home!</span></span>
+    </button>
+    <button class="tab" data-src="catch-the-robber.html">
       <span class="emo">🚓</span>
-      <h2>Catch the Robber</h2>
-      <p>Memorize the grid, find the facts, catch him hiding!</p>
-    </div>
-    <iframe class="frame" src="catch-the-robber.html" title="Catch the Robber game" loading="lazy"></iframe>
-  </section>
+      <span><span class="t">Catch the Robber</span><br>
+      <span class="d">Memorize the grid and catch him hiding!</span></span>
+    </button>
+    <button class="tab" data-src="robbers-footprints.html">
+      <span class="emo">👣</span>
+      <span><span class="t">Robber's Footprints</span><br>
+      <span class="d">Find the real stolen numbers in the lineup!</span></span>
+    </button>
+    <button class="tab" data-src="beat-the-clock-heist.html">
+      <span class="emo">⏱️</span>
+      <span><span class="t">Beat the Clock Heist</span><br>
+      <span class="d">Lock the vault before he cracks the safe!</span></span>
+    </button>
+  </div>
+
+  <iframe class="frame" id="frame" src="times-table-robber.html" title="Times table game"></iframe>
 </div>
+
+<script>
+  const tabs=document.querySelectorAll('.tab'), frame=document.getElementById('frame');
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.toggle('on',x===t));
+    frame.src=t.dataset.src;
+  }));
+</script>
 </body>
 </html>
